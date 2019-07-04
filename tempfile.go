@@ -75,3 +75,12 @@ func (t *tempFile) Write(content string) error {
 	}
 	return t.pushContent()
 }
+
+// OpenWith opens the temporary file with external editor.
+func (t *tempFile) OpenWith(editor *Editor) error {
+	err := editor.run(t.Name())
+	if err != nil {
+		return err
+	}
+	return t.pushContent()
+}

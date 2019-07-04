@@ -77,3 +77,25 @@ func TestWrite(t *testing.T) {
 		}
 	}
 }
+
+type mockApp struct{}
+
+func (m *mockApp) run(filePath string) error {
+	return nil
+}
+
+func TestOpenWith(t *testing.T) {
+	t.Parallel()
+
+	tempFile, err := NewTempFile("", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer Clean(tempFile)
+
+	editor := &Editor{&mockApp{}}
+	tempFile.OpenWith(editor)
+	if err != nil {
+		t.Fatal(err)
+	}
+}

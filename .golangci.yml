@@ -42,3 +42,11 @@ linters-settings:
     include-go-root: false
     packages:
       - github.com/davecgh/go-spew/spew
+
+
+# ==============================================================================
+#   issues
+# ==============================================================================
+issues:
+  exclude:
+    # - regex

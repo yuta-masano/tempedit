@@ -44,8 +44,6 @@ enable_go_modules_env := GO111MODULE=on
 #  lint tool
 #===============================================================================
 GOLINTER := golangci-lint
-GOLINTER_OPTS :=
-GOLINTER_EXCLUDE_REGEX :=
 
 #===============================================================================
 #  gitignore.io
@@ -102,8 +100,7 @@ install:
 
 .PHONY: lint ## lint go sources and check whether only LICENSE file has copyright sentence
 lint: install
-	$(GOLINTER) run $(GOLINTER_OPTS)                                           \
-		$(if $(GOLINTER_EXCLUDE_REGEX), --exclude='$(GOLINTER_EXCLUDE_REGEX)') \
+	$(GOLINTER) run
 	$(tool_dir)/copyright_check.sh
 
 .PHONY: test ## go test

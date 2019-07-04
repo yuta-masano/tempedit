@@ -4,6 +4,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"text/template"
 )
 
 const (
@@ -79,6 +80,20 @@ func (t *tempFile) Write(content string) error {
 // OpenWith opens the temporary file with external editor.
 func (t *tempFile) OpenWith(editor *Editor) error {
 	err := editor.run(t.Name())
+	if err != nil {
+		return err
+	}
+	return t.pushContent()
+}
+
+// WriteTemplate is a wrapper method of text/template.
+// src is string to be parsed and data is objedt to be applied parsed template.
+func (t *tempFile) WriteTemplate(src string, data interface{}) error {
+	tpl, err := template.New("").Parse(src)
+	if err != nil {
+		return err
+	}
+	err = tpl.Execute(t.File, data)
 	if err != nil {
 		return err
 	}

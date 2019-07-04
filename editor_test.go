@@ -7,8 +7,6 @@ import (
 )
 
 func TestDefaultName(t *testing.T) {
-	t.Parallel()
-
 	var (
 		input  string
 		expect string
@@ -40,7 +38,6 @@ func TestDefaultName(t *testing.T) {
 }
 
 func TestNewEditor(t *testing.T) {
-	t.Parallel()
 	_ = os.Unsetenv("EDITOR")
 
 	var (

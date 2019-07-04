@@ -116,19 +116,6 @@ push-release-tag: lint test
 	$(tool_dir)/add_release_tag.sh "$(new_tag)"
 	git branch --move "$(latest_local_devel_branch)" "$(latest_local_devel_branch)-pushed"
 
-.PHONY: all-build
-all-build: lint test
-	$(tool_dir)/build_static_bins.sh "$(ALL_OS)" "$(ALL_ARCH)"        \
-		"$(static_flags)" "$(ld_flags)" "$(pkg_dest_dir)" "$(BINARY)"
-
-.PHONY: all-archive
-all-archive:
-	$(enable_go_modules_env) $(tool_dir)/archive.sh "$(ALL_OS)" "$(ALL_ARCH)" "$(pkg_dest_dir)"
-
-.PHONY: release ## build binaries for all platforms and upload them to GitHub
-release: all-build all-archive
-	ghr "$(version)" "$(release_dir)"
-
 .PHONY: clean ## uninstall the binary and remove non versioning files and direcotries
 clean:
 	$(enable_go_modules_env) go mod tidy

@@ -16,6 +16,8 @@ run:
   concurrency: 4
   deadline: 1m
   tests: false
+  skip-dirs:
+    - _tools/
 
 # ==============================================================================
 #   linters-settings

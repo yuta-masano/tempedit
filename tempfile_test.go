@@ -1,6 +1,7 @@
 package tempedit
 
 import (
+	"bytes"
 	"os"
 	"testing"
 )
@@ -271,6 +272,80 @@ func TestIsChangedCaseOK(t *testing.T) {
 		}
 		if !changed {
 			t.Fatalf("caseOK: #%d: wrong changed status: expect=%t, but got=%t", i+1, true, changed)
+		}
+	}
+}
+
+func TestString(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		input  string
+		expect string
+	}{
+		{
+			input:  "test 1",
+			expect: "test 1",
+		},
+		{
+			input:  "test2\ntest2",
+			expect: "test2\ntest2",
+		},
+		{
+			input: `test3
+test3
+test3`,
+			expect: "test3\ntest3\ntest3",
+		},
+	}
+
+	for i, c := range testCases {
+		tempFile, err := NewTempFile("", "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer Clean(tempFile)
+		tempFile.contents[latest] = []byte(c.input)
+		output := tempFile.String()
+		if output != c.expect {
+			t.Fatalf("wrong test [%d]: expected=%s, but got=%s", i+1, c.expect, output)
+		}
+	}
+}
+
+func TestByte(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		input  string
+		expect []byte
+	}{
+		{
+			input:  "test 1",
+			expect: []byte("test 1"),
+		},
+		{
+			input:  "test2\ntest2",
+			expect: []byte("test2\ntest2"),
+		},
+		{
+			input: `test3
+test3
+test3`,
+			expect: []byte("test3\ntest3\ntest3"),
+		},
+	}
+
+	for i, c := range testCases {
+		tempFile, err := NewTempFile("", "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer Clean(tempFile)
+		tempFile.contents[latest] = []byte(c.input)
+		output := tempFile.Byte()
+		if !bytes.Equal(output, c.expect) {
+			t.Fatalf("wrong test [%d]: expected=%s, but got=%s", i+1, c.expect, output)
 		}
 	}
 }

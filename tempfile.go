@@ -121,3 +121,14 @@ func (t *tempFile) IsChanged() (changed bool, err error) {
 	}
 	return true, nil
 }
+
+// String yields a content of the temporary file as string.
+func (t *tempFile) String() string {
+	// nil byte slice can be type casted into empty string.
+	return string(t.contents[latest])
+}
+
+// Byte yields a content of the temporary file as []byte.
+func (t *tempFile) Byte() []byte {
+	return t.contents[latest]
+}

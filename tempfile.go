@@ -1,6 +1,7 @@
 package tempedit
 
 import (
+	"io"
 	"io/ioutil"
 	"os"
 )
@@ -48,4 +49,29 @@ func Clean(tempFiles ...*TempFile) {
 			panic(err)
 		}
 	}
+}
+
+// pushContent must be called every writing method.
+// It pushes contents of before / after writing the temporary file to
+// tempFile.contents.
+func (t *tempFile) pushContent() error {
+	_, err := t.Seek(0, io.SeekStart)
+	if err != nil {
+		return err
+	}
+	b, err := ioutil.ReadAll(t)
+	if err != nil {
+		return err
+	}
+	t.contents[previous], t.contents[latest] = t.contents[latest], b
+	return nil
+}
+
+// Write writes a content into the temporary file.
+func (t *tempFile) Write(content string) error {
+	_, err := t.File.Write([]byte(content))
+	if err != nil {
+		return err
+	}
+	return t.pushContent()
 }

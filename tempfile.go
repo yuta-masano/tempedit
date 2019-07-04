@@ -1,6 +1,8 @@
 package tempedit
 
 import (
+	"bytes"
+	"errors"
 	"io"
 	"io/ioutil"
 	"os"
@@ -98,4 +100,24 @@ func (t *tempFile) WriteTemplate(src string, data interface{}) error {
 		return err
 	}
 	return t.pushContent()
+}
+
+// IsChanged compares the contents of before / after writing the temporary
+// file.
+// NOTE: If the size of contents becomes 0, IsChanged treates it as false even
+// though the contents have been actually changed.
+func (t *tempFile) IsChanged() (changed bool, err error) {
+	if t.contents[previous] == nil && t.contents[latest] == nil {
+		return false, errors.New(ErrMsgNotCreated)
+	}
+	// Trim the last "\n" from the contents of before / after to
+	// deal with Last EOL problem (https://github.com/vim-jp/issues/issues/152).
+	// If the contents do not end with "\n", bytes.TrimRight does nothing.
+	if bytes.Equal(bytes.TrimRight(t.contents[previous], "\n"), bytes.TrimRight(t.contents[latest], "\n")) {
+		return false, errors.New(ErrMsgNotChanged)
+	}
+	if len(t.contents[latest]) == 0 {
+		return false, errors.New(ErrMsgEmpty)
+	}
+	return true, nil
 }

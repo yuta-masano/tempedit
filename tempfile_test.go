@@ -150,3 +150,127 @@ func TestWriteTEmplate(t *testing.T) {
 		}
 	}
 }
+
+func TestIsChangedCaseNotChanged(t *testing.T) {
+	t.Parallel()
+
+	var err error
+
+	tempFile, err := NewTempFile("", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer Clean(tempFile)
+	_, err = tempFile.IsChanged()
+	if err.Error() != ErrMsgNotChanged {
+		t.Fatalf("temporary file initialize must be non-changed status: expect=%s, but got=%s", ErrMsgNotChanged, err)
+	}
+
+	var caseNotChanged = []struct {
+		expect string
+		before string
+		after  string
+	}{
+		{
+			expect: ErrMsgNotChanged,
+			before: "foo",
+			after:  "foo",
+		},
+		{
+			expect: ErrMsgNotChanged,
+			before: "foo\n",
+			after:  "foo\n",
+		},
+		{
+			expect: ErrMsgNotChanged,
+			before: "foo",
+			after:  "foo\n",
+		},
+		{
+			expect: ErrMsgNotChanged,
+			before: "foo\n",
+			after:  "foo",
+		},
+	}
+	for i, test := range caseNotChanged {
+		tempFile.contents[previous], tempFile.contents[latest] =
+			[]byte(test.before), []byte(test.after)
+		_, err = tempFile.IsChanged()
+		if err.Error() != ErrMsgNotChanged {
+			t.Fatalf("caseNotChanged: #%d: wrong err msg: expect=%s, but got=%s", i+1, ErrMsgNotChanged, err)
+		}
+	}
+}
+
+func TestIsChangedCaseEmpty(t *testing.T) {
+	t.Parallel()
+
+	var err error
+
+	tempFile, err := NewTempFile("", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer Clean(tempFile)
+	_, err = tempFile.IsChanged()
+	if err.Error() != ErrMsgNotChanged {
+		t.Fatalf("temporary file initialize must be non-changed status: expect=%s, but got=%s", ErrMsgNotChanged, err)
+	}
+
+	var caseEmpty = struct {
+		expect string
+		before string
+		after  string
+	}{
+		expect: ErrMsgEmpty,
+		before: "foo",
+		after:  "",
+	}
+	tempFile.contents[previous], tempFile.contents[latest] =
+		[]byte(caseEmpty.before), []byte(caseEmpty.after)
+	_, err = tempFile.IsChanged()
+	if err.Error() != ErrMsgEmpty {
+		t.Fatalf("caseEmpty: wrong err msg: expect=%s, but got=%s", ErrMsgEmpty, err)
+	}
+}
+
+func TestIsChangedCaseOK(t *testing.T) {
+	t.Parallel()
+
+	var err error
+
+	tempFile, err := NewTempFile("", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer Clean(tempFile)
+	_, err = tempFile.IsChanged()
+	if err.Error() != ErrMsgNotChanged {
+		t.Fatalf("temporary file initialize must be non-changed status: expect=%s, but got=%s", ErrMsgNotChanged, err)
+	}
+
+	var caseOK = []struct {
+		before string
+		after  string
+	}{
+		{
+			before: "foo",
+			after:  "abc",
+		},
+		{
+			before: "foo\n",
+			after:  "abc\n",
+		},
+	}
+	for i, test := range caseOK {
+		tempFile.contents[previous], tempFile.contents[latest] =
+			[]byte(test.before), []byte(test.after)
+		changed, err := tempFile.IsChanged()
+		if err != nil {
+			t.Fatalf("caseOK: #%d: wrong err status: expect=nil, but got=%s", i+1, err)
+		}
+		if !changed {
+			t.Fatalf("caseOK: #%d: wrong changed status: expect=%t, but got=%t", i+1, true, changed)
+		}
+	}
+}

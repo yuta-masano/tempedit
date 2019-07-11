@@ -1,71 +1,74 @@
 #!/bin/bash
-
+#===============================================================================
+#         USAGE: add_changelog.sh NEW_TAG
+#
+#   DESCRIPTION: Add working change history to the top of the CHANGELOG file
+#                and commit it.
+#===============================================================================
 # Fail on unset variables, command errors and pipe fail.
 set -o nounset -o errexit -o pipefail
 
 # Prevent commands misbehaving due to locale differences.
 export LC_ALL=C LANG=C
 
-# trap for `mktemp`
-trap 'rm -f /tmp/tmp.*."$(basename --suffix='.sh' "$0")"'         0        # EXIT
-trap 'rm -f /tmp/tmp.*."$(basename --suffix='.sh' "$0")"; exit 1' 1 2 3 15 # HUP QUIT INT TERM
-
-# 既存の CHANGELOG　の先頭に新しい変更履歴を挿入したいので、
-#   1. 空の一時ファイルに変更したい情報を記入。
-#   2. 既存の変更履歴を 1. に追記。
-#   3. 1. のファイルを CHANGELOG としてコピー。
-# という手法を取っている。
-
 #===============================================================================
-#  新しい CHANGELOG を作成する
+#  GLOBAL DECLARATIONS
 #===============================================================================
+SCRIPT_NAME="${0##*/}"
+: ${TMPDIR=/tmp}
+TEMP_FILE_SUFFIX="${SCRIPT_NAME//.sh/}"
+
+# Script arguments
 NEW_TAG="$1"
+
+#===============================================================================
+#  TRAPS
+#===============================================================================
+# trap for multiple `mktemp`
+trap 'rm --force "$TMPDIR"/tmp.*."$TEMP_FILE_SUFFIX"'         0        # EXIT
+trap 'rm --force "$TMPDIR"/tmp.*."$TEMP_FILE_SUFFIX"; exit 1' 1 2 3 15 # HUP QUIT INT TERM
+
+#===============================================================================
+#  MAIN SCRIPT
+#===============================================================================
+#---  Step 1 -------------------------------------------------------------------
+# Create an empty temporary file and write the working change history to it.
+# Add the old change history to the temporary file.
+#-------------------------------------------------------------------------------
 latest_tag="$(git describe --always --dirty)"
 from_tag="${latest_tag%%-*}" # tag から dirty suffix を除去
-
 commit_logs=$(git log "$from_tag..."                                        \
 	--format='    * %s'                                                     \
-	--grep='([a-z]\+ #[0-9]\+'                                              \
 	| sed 's/\([^'$'\x01''-'$'\x7e'']\) \([^'$'\x01''-'$'\x7e'']\)/\1\2/g')
 	# 上の sed は、「全角 全角」となっている文字列から半角スペースを
 	# 取り除いている。
 	# 2 行以上のコミットログの件名を一行で表示すると、
-	# 余計な半角スペースが含まれてしまうので、それを取り除くため。
-	# 以下を使った強引な方法。
+	# 余計な半角スペースが含まれてしまうので、それを取り除く。
+	# 以下の bash 機能を使っている。
 	# - bash の $'...' 表記を使って ASCII コード以外 = 半角文字以外を表現。
 	# - bash の文字列結合は単に文字列を隣接させるだけでよい。
-change_logs="$(echo "$commit_logs"  | grep '(change #' || :)"
-feature_logs="$(echo "$commit_logs" | grep '(feat #'   || :)"
-fix_logs="$(echo "$commit_logs"     | grep '(fix #'    || :)"
-
 current_changelog="$(git show origin/master:CHANGELOG)"
-new_chengelog="$(mktemp --tmpdir=/tmp --suffix=".$(basename --suffix='.sh' "$0")")"
+new_chengelog="$(mktemp --suffix=".$TEMP_FILE_SUFFIX")"
 {
 	echo '# Delete this line to accept this draft.'
 	echo "$NEW_TAG ($(date +'%F'))"
-	if [ -n "$change_logs" ]; then
-		echo '  Incompatible Change'
-		echo "${change_logs//'(change #'/'(#'}"
-	fi
-	if [ -n "$feature_logs" ]; then
-		echo '  New Feature'
-		echo "${feature_logs//'(feat #'/'(#'}"
-	fi
-	if [ -n "$fix_logs" ]; then
-		echo '  Bug Fix'
-		echo "${fix_logs//'(fix #'/'(#'}"
-	fi
+	echo '  Incompatible Change'
+	echo "$commit_logs" | sed --quiet 's/change: //p'
+	echo '  New Feature'
+	echo "$commit_logs" | sed --quiet 's/feat: //p'
+	echo '  Bug Fix'
+	echo "$commit_logs" | sed --quiet 's/fix: //p'
 	echo
 	echo "$current_changelog"
 } > "$new_chengelog"
 
-#===============================================================================
-#  エディタで CHANGELOG を編集
-#===============================================================================
+#---  Step 2  ------------------------------------------------------------------
+# Edit the temporary file with vim.
+#-------------------------------------------------------------------------------
 befor="$(md5sum "$new_chengelog")"
 vi "$new_chengelog" < $(tty) > $(tty)
 after="$(md5sum "$new_chengelog")"
-if [ "$befor" = "$after" ]; then
+if [ "_$befor" = "_$after" ]; then
 	echo 'CHANGELOG was not changed' >&2
 	exit 1
 fi
@@ -75,18 +78,21 @@ if [ $? -eq 0 ]; then
 	exit 1
 fi
 
-#===============================================================================
-#  CHANGELOG を適用してコミット
-#===============================================================================
+#---  Step 3  ------------------------------------------------------------------
+# Copy the temporary file as CHANGELOG.
+#-------------------------------------------------------------------------------
 cp --force "$new_chengelog" CHANGELOG
+
+#---  Step 4  ------------------------------------------------------------------
+# Edit a commit message for CHANGELOG with vim.
+#-------------------------------------------------------------------------------
 git add CHANGELOG
+close_issues="$(echo "$commit_logs"       \
+	| egrep --only-matching '\(#[0-9]+\)' \
+	| sed 's/[()]//g; s/^/close /'        \
+	| uniq | sort --version-sort || :)"
 
-close_issues="$(echo "$commit_logs"            \
-	| grep --only-matching -E '[a-z]+ #[0-9]+' \
-	| sed 's/[a-z]\+/close/'                   \
-	| uniq || :)"
-
-commit_messages="$(mktemp --tmpdir=/tmp --suffix=".$(basename --suffix='.sh' "$0")")"
+commit_messages="$(mktemp --suffix=".$TEMP_FILE_SUFFIX")"
 {
 	echo '# This is a commit message to commit CHANGELOG.'
 	echo '# DO NOT FORGET to remove these lines.'
@@ -96,6 +102,9 @@ commit_messages="$(mktemp --tmpdir=/tmp --suffix=".$(basename --suffix='.sh' "$0
 		echo "$close_issues"
 	fi
 } > "$commit_messages"
-
 vi "$commit_messages" < $(tty) > $(tty)
-git commit --file "$commit_messages"
+
+#---  Step 5  ------------------------------------------------------------------
+# Commit CHANGELOG.
+#-------------------------------------------------------------------------------
+git commit --file="$commit_messages"

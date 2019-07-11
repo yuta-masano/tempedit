@@ -24,7 +24,7 @@ $ make setup
 
 Versioning conforms to the [Semantic Versioning](http://semver.org/).
 
-The branch name contains the version number to release (e.g. `local -0.1 .1 `).  
+The branch name contains the version number to release (e.g. `local-0.1.1`).  
 In the subsequent work, the release version number is automatically obtained from the local branch name.
 
 ### 3. Commit commit commit...
@@ -58,7 +58,7 @@ Perform the following sequence of tasks semi-automatically. **Requires vi operat
 
 3. Create the release tag and push.
 
-Use the `_tool/add-release-tag.sh` to create a history of changes in the releasing version from CHANGELOG as an annotated tag and push it to remote repository.
+   Use the `_tool/add-release-tag.sh` to create a history of changes in the releasing version from CHANGELOG as an annotated tag and push it to remote repository.
 
 ### 5. `$ make release`
 
